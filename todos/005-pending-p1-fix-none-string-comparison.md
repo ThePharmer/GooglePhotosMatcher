@@ -1,7 +1,7 @@
 ---
 id: 005
 priority: p1
-status: pending
+status: completed
 category: bug
 created: 2025-11-22
 effort: small

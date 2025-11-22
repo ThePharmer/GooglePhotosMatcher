@@ -5,65 +5,129 @@ import piexif
 from win32_setctime import setctime
 from fractions import Fraction
 
+# Public API
+__all__ = [
+    'searchMedia',
+    'fixTitle',
+    'checkIfSameName',
+    'createFolders',
+    'setWindowsTime',
+    'set_EXIF',
+]
 
-# Function to search media associated to the JSON
+
 def searchMedia(path, title, mediaMoved, nonEdited, editedWord):
+    """Search for media file associated with JSON metadata.
+
+    Tries multiple filename patterns in priority order.
+    Returns the found filename or None if not found.
+    """
     title = fixTitle(title)
-    realTitle = str(title.rsplit('.', 1)[0] + "-" + editedWord + "." + title.rsplit('.', 1)[1])
-    filepath = path + "\\" + realTitle  # First we check if exists an edited version of the image
-    if not os.path.exists(filepath):
-        realTitle = str(title.rsplit('.', 1)[0] + "(1)." + title.rsplit('.', 1)[1])
-        filepath = path + "\\" + realTitle  # First we check if exists an edited version of the image
-        if not os.path.exists(filepath) or os.path.exists(path + "\\" + title + "(1).json"):
-            realTitle = title
-            filepath = path + "\\" + realTitle  # If not, check if exists the path with the same name
-            if not os.path.exists(filepath):
-                realTitle = checkIfSameName(title, title, mediaMoved, 1)  # If not, check if exists the path to the same name adding (1), (2), etc
-                filepath = str(path + "\\" + realTitle)
-                if not os.path.exists(filepath):
-                    title = (title.rsplit('.', 1)[0])[:47] + "." + title.rsplit('.', 1)[1]  # Sometimes title is limited to 47 characters, check also that
-                    realTitle = str(title.rsplit('.', 1)[0] + "-editado." + title.rsplit('.', 1)[1])
-                    filepath = path + "\\" + realTitle
-                    if not os.path.exists(filepath):
-                        realTitle = str(title.rsplit('.', 1)[0] + "(1)." + title.rsplit('.', 1)[1])
-                        filepath = path + "\\" + realTitle
-                        if not os.path.exists(filepath):
-                            realTitle = title
-                            filepath = path + "\\" + realTitle
-                            if not os.path.exists(filepath):
-                                realTitle = checkIfSameName(title, title, mediaMoved, 1)
-                                filepath = path + "\\" + realTitle
-                                if not os.path.exists(filepath):  # If path not found, return null
-                                    realTitle = None
-                        else:
-                            filepath = path + "\\" + title  # Move original media to another folder
-                            os.replace(filepath, nonEdited + "\\" + title)
-                    else:
-                        filepath = path + "\\" + title  # Move original media to another folder
-                        os.replace(filepath, nonEdited + "\\" + title)
-        else:
-            filepath = path + "\\" + title  # Move original media to another folder
-            os.replace(filepath, nonEdited + "\\" + title)
-    else:
-        filepath = path + "\\" + title  # Move original media to another folder
-        os.replace(filepath, nonEdited + "\\" + title)
+    base, ext = title.rsplit('.', 1) if '.' in title else (title, '')
+    ext = '.' + ext if ext else ''
 
-    return str(realTitle)
+    # Define search patterns in priority order
+    candidates = [
+        f"{base}-{editedWord}{ext}",      # Edited version (e.g., photo-edited.jpg)
+        f"{base}(1){ext}",                 # Duplicate naming (e.g., photo(1).jpg)
+        title,                             # Original name
+    ]
+
+    # Also try truncated versions (Google Photos limits to 47 chars)
+    truncated_base = base[:47]
+    if truncated_base != base:
+        candidates.extend([
+            f"{truncated_base}-{editedWord}{ext}",  # Truncated + edited
+            f"{truncated_base}(1){ext}",            # Truncated + duplicate
+            f"{truncated_base}{ext}",               # Truncated original
+        ])
+
+    # Check for edited version - if found, move original to nonEdited folder
+    edited_candidate = f"{base}-{editedWord}{ext}"
+    edited_path = os.path.join(path, edited_candidate)
+    if os.path.exists(edited_path) and edited_candidate not in mediaMoved:
+        # Move original to nonEdited folder
+        original_path = os.path.join(path, title)
+        if os.path.exists(original_path):
+            os.replace(original_path, os.path.join(nonEdited, title))
+        return edited_candidate
+
+    # Check duplicate (1) version
+    dup_candidate = f"{base}(1){ext}"
+    dup_path = os.path.join(path, dup_candidate)
+    dup_json_path = os.path.join(path, f"{title}(1).json")
+    if os.path.exists(dup_path) and not os.path.exists(dup_json_path) and dup_candidate not in mediaMoved:
+        original_path = os.path.join(path, title)
+        if os.path.exists(original_path):
+            os.replace(original_path, os.path.join(nonEdited, title))
+        return dup_candidate
+
+    # Check original name
+    if os.path.exists(os.path.join(path, title)) and title not in mediaMoved:
+        return title
+
+    # Check with checkIfSameName for numbered variants
+    variant = checkIfSameName(title, mediaMoved)
+    if os.path.exists(os.path.join(path, variant)):
+        return variant
+
+    # Try truncated versions
+    if truncated_base != base:
+        truncated_title = f"{truncated_base}{ext}"
+        for candidate in [f"{truncated_base}-{editedWord}{ext}", f"{truncated_base}(1){ext}", truncated_title]:
+            candidate_path = os.path.join(path, candidate)
+            if os.path.exists(candidate_path) and candidate not in mediaMoved:
+                if candidate != truncated_title:
+                    original_path = os.path.join(path, truncated_title)
+                    if os.path.exists(original_path):
+                        os.replace(original_path, os.path.join(nonEdited, truncated_title))
+                return candidate
+
+        # Check truncated with checkIfSameName
+        variant = checkIfSameName(truncated_title, mediaMoved)
+        if os.path.exists(os.path.join(path, variant)):
+            return variant
+
+    return None
 
 
-# Supress incompatible characters
 def fixTitle(title):
-    return str(title).replace("%", "").replace("<", "").replace(">", "").replace("=", "").replace(":", "").replace("?","").replace(
-        "¿", "").replace("*", "").replace("#", "").replace("&", "").replace("{", "").replace("}", "").replace("\\", "").replace(
-        "@", "").replace("!", "").replace("¿", "").replace("+", "").replace("|", "").replace("\"", "").replace("\'", "")
+    """Sanitize title by removing path components and dangerous characters."""
+    # Get only the basename, removing any path components (security: prevent path traversal)
+    title = os.path.basename(str(title))
+    # Remove dangerous characters
+    dangerous_chars = ['%', '<', '>', '=', ':', '?', '¿', '*', '#', '&',
+                       '{', '}', '\\', '@', '!', '+', '|', '"', "'", '\x00']
+    for char in dangerous_chars:
+        title = title.replace(char, "")
+    return title
 
-# Recursive function to search name if its repeated
-def checkIfSameName(title, titleFixed, mediaMoved, recursionTime):
-    if titleFixed in mediaMoved:
-        titleFixed = title.rsplit('.', 1)[0] + "(" + str(recursionTime) + ")" + "." + title.rsplit('.', 1)[1]
-        return checkIfSameName(title, titleFixed, mediaMoved, recursionTime + 1)
-    else:
-        return titleFixed
+def checkIfSameName(title, mediaMoved, max_attempts=1000):
+    """Find unique filename by appending (1), (2), etc.
+
+    Args:
+        title: Original filename
+        mediaMoved: Set of already used filenames
+        max_attempts: Maximum number of variants to try
+
+    Returns:
+        A unique filename not in mediaMoved
+
+    Raises:
+        ValueError: If no unique name found within max_attempts
+    """
+    if title not in mediaMoved:
+        return title
+
+    base, ext = title.rsplit('.', 1) if '.' in title else (title, '')
+    ext = '.' + ext if ext else ''
+
+    for i in range(1, max_attempts + 1):
+        candidate = f"{base}({i}){ext}"
+        if candidate not in mediaMoved:
+            return candidate
+
+    raise ValueError(f"Could not find unique name for {title} after {max_attempts} attempts")
 
 def createFolders(fixed, nonEdited):
     if not os.path.exists(fixed):
@@ -114,12 +178,7 @@ def set_EXIF(filepath, lat, lng, altitude, timeStamp):
     exif_dict['Exif'][piexif.ExifIFD.DateTimeOriginal] = dateTime
     exif_dict['Exif'][piexif.ExifIFD.DateTimeDigitized] = dateTime
 
-    exif_bytes = piexif.dump(exif_dict)
-    piexif.insert(exif_bytes, filepath)
-
-
     try:
-        exif_dict = piexif.load(filepath)
         lat_deg = to_deg(lat, ["S", "N"])
         lng_deg = to_deg(lng, ["W", "E"])
 
@@ -138,11 +197,10 @@ def set_EXIF(filepath, lat, lng, altitude, timeStamp):
 
         exif_dict['GPS'] = gps_ifd
 
-        exif_bytes = piexif.dump(exif_dict)
-        piexif.insert(exif_bytes, filepath)
-
     except Exception as e:
         print("Coordinates not settled")
-        pass
+
+    exif_bytes = piexif.dump(exif_dict)
+    piexif.insert(exif_bytes, filepath)
 
 
