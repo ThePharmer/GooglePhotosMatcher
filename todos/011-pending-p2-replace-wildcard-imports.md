@@ -1,7 +1,7 @@
 ---
 id: 011
 priority: p2
-status: pending
+status: completed
 category: code-quality
 created: 2025-11-22
 effort: small

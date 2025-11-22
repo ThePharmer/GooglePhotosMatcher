@@ -1,7 +1,7 @@
 ---
 id: 013
 priority: p3
-status: pending
+status: completed
 category: code-quality
 created: 2025-11-22
 effort: medium

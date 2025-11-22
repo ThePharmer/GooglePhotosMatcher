@@ -1,7 +1,7 @@
 ---
 id: 014
 priority: p3
-status: pending
+status: completed
 category: bug
 created: 2025-11-22
 effort: small

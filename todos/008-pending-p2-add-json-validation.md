@@ -1,7 +1,7 @@
 ---
 id: 008
 priority: p2
-status: pending
+status: completed
 category: security
 created: 2025-11-22
 effort: medium

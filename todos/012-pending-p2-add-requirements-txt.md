@@ -1,7 +1,7 @@
 ---
 id: 012
 priority: p2
-status: pending
+status: completed
 category: documentation
 created: 2025-11-22
 effort: small

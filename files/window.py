@@ -1,4 +1,5 @@
-from main import *
+import PySimpleGUI as sg
+from main import mainProcess
 
 sg.theme("DarkTeal2")
 layout = [[sg.T("")],
