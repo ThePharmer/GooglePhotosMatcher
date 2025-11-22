@@ -1,6 +1,10 @@
+from __future__ import annotations
+
 import os
 import time
 from datetime import datetime
+from typing import Optional
+
 import piexif
 from win32_setctime import setctime
 from fractions import Fraction
@@ -16,7 +20,13 @@ __all__ = [
 ]
 
 
-def searchMedia(path, title, mediaMoved, nonEdited, editedWord):
+def searchMedia(
+    path: str,
+    title: str,
+    mediaMoved: set[str],
+    nonEdited: str,
+    editedWord: str
+) -> Optional[str]:
     """Search for media file associated with JSON metadata.
 
     Tries multiple filename patterns in priority order.
@@ -91,7 +101,7 @@ def searchMedia(path, title, mediaMoved, nonEdited, editedWord):
     return None
 
 
-def fixTitle(title):
+def fixTitle(title: str) -> str:
     """Sanitize title by removing path components and dangerous characters."""
     # Get only the basename, removing any path components (security: prevent path traversal)
     title = os.path.basename(str(title))
@@ -102,7 +112,7 @@ def fixTitle(title):
         title = title.replace(char, "")
     return title
 
-def checkIfSameName(title, mediaMoved, max_attempts=1000):
+def checkIfSameName(title: str, mediaMoved: set[str], max_attempts: int = 1000) -> str:
     """Find unique filename by appending (1), (2), etc.
 
     Args:
@@ -129,20 +139,20 @@ def checkIfSameName(title, mediaMoved, max_attempts=1000):
 
     raise ValueError(f"Could not find unique name for {title} after {max_attempts} attempts")
 
-def createFolders(fixed, nonEdited):
+def createFolders(fixed: str, nonEdited: str) -> None:
     if not os.path.exists(fixed):
         os.mkdir(fixed)
 
     if not os.path.exists(nonEdited):
         os.mkdir(nonEdited)
 
-def setWindowsTime(filepath, timeStamp):
+def setWindowsTime(filepath: str, timeStamp: int) -> None:
     setctime(filepath, timeStamp)  # Set windows file creation time
     date = datetime.fromtimestamp(timeStamp)
     modTime = time.mktime(date.timetuple())
     os.utime(filepath, (modTime, modTime))  # Set windows file modification time
 
-def to_deg(value, loc):
+def to_deg(value: float, loc: list[str]) -> tuple[int, int, float, str]:
     """convert decimal coordinates into degrees, munutes and seconds tuple
     Keyword arguments: value is float gps-value, loc is direction list ["S", "N"] or ["W", "E"]
     return: tuple like (25, 13, 48.343 ,'N')
@@ -161,7 +171,7 @@ def to_deg(value, loc):
     return (deg, min, sec, loc_value)
 
 
-def change_to_rational(number):
+def change_to_rational(number: float) -> tuple[int, int]:
     """convert a number to rational
     Keyword arguments: number
     return: tuple like (1, 2), (numerator, denominator)
@@ -170,7 +180,7 @@ def change_to_rational(number):
     return (f.numerator, f.denominator)
 
 
-def set_EXIF(filepath, lat, lng, altitude, timeStamp):
+def set_EXIF(filepath: str, lat: float, lng: float, altitude: float, timeStamp: int) -> None:
     exif_dict = piexif.load(filepath)
 
     dateTime = datetime.fromtimestamp(timeStamp).strftime("%Y:%m:%d %H:%M:%S")  # Create date object

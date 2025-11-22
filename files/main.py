@@ -1,5 +1,9 @@
+from __future__ import annotations
+
 import os
 import json
+from typing import Optional
+
 from PIL import Image
 import PySimpleGUI as sg
 from auxFunctions import (
@@ -9,7 +13,8 @@ from auxFunctions import (
     set_EXIF,
 )
 
-def mainProcess(browserPath, window, editedW):
+
+def mainProcess(browserPath: str, window: sg.Window, editedW: Optional[str]) -> None:
     piexifCodecs = [k.casefold() for k in ['TIF', 'TIFF', 'JPEG', 'JPG']]
 
     mediaMoved = set()  # set with names of all the media already matched
