@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "google-photos-matcher"
+version = "1.0.0"
+description = "Match Google Photos metadata with media files from Google Takeout"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Graphics",
+]
+
+dependencies = [
+    "Pillow>=9.0.0",
+    "piexif>=1.1.3",
+    "win32-setctime>=1.1.0; sys_platform == 'win32'",
+]
+
+[project.optional-dependencies]
+gui = [
+    "PySimpleGUI>=4.60.0",
+]
+heic = [
+    "pillow-heif>=0.13.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+]
+all = [
+    "PySimpleGUI>=4.60.0",
+    "pillow-heif>=0.13.0",
+]
+
+[project.scripts]
+google-photos-matcher = "files.cli:main"
+
+[project.gui-scripts]
+google-photos-matcher-gui = "files.window:main"
+
+[tool.setuptools.packages.find]
+include = ["files*"]
+
+[tool.setuptools.package-data]
+files = ["*.ico", "py.typed"]

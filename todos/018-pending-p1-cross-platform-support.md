@@ -1,7 +1,7 @@
 ---
 id: 018
 priority: p1
-status: pending
+status: completed
 category: compatibility
 created: 2025-11-22
 effort: medium

@@ -1,7 +1,7 @@
 ---
 id: 023
 priority: p3
-status: pending
+status: completed
 category: performance
 created: 2025-11-22
 effort: medium
