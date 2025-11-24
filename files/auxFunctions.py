@@ -1,13 +1,21 @@
 from __future__ import annotations
 
+import logging
 import os
+import platform
 import time
 from datetime import datetime
 from typing import Optional
 
 import piexif
-from win32_setctime import setctime
 from fractions import Fraction
+
+# Get logger (initialized in main.py via setup_logging)
+logger = logging.getLogger("GooglePhotosMatcher")
+
+# Only import on Windows
+if platform.system() == "Windows":
+    from win32_setctime import setctime
 
 # Public API
 __all__ = [
@@ -15,7 +23,7 @@ __all__ = [
     'fixTitle',
     'checkIfSameName',
     'createFolders',
-    'setWindowsTime',
+    'set_file_times',
     'set_EXIF',
 ]
 
@@ -146,11 +154,28 @@ def createFolders(fixed: str, nonEdited: str) -> None:
     if not os.path.exists(nonEdited):
         os.mkdir(nonEdited)
 
-def setWindowsTime(filepath: str, timeStamp: int) -> None:
-    setctime(filepath, timeStamp)  # Set windows file creation time
-    date = datetime.fromtimestamp(timeStamp)
-    modTime = time.mktime(date.timetuple())
-    os.utime(filepath, (modTime, modTime))  # Set windows file modification time
+def set_file_times(filepath: str, timestamp: int) -> None:
+    """Set file creation and modification times cross-platform."""
+
+    # Set modification time (works on all platforms)
+    date = datetime.fromtimestamp(timestamp)
+    mod_time = time.mktime(date.timetuple())
+    os.utime(filepath, (mod_time, mod_time))
+
+    # Set creation time (platform-specific)
+    system = platform.system()
+
+    if system == "Windows":
+        from win32_setctime import setctime
+        setctime(filepath, timestamp)
+    elif system == "Darwin":  # macOS
+        try:
+            import subprocess
+            date_str = datetime.fromtimestamp(timestamp).strftime("%m/%d/%Y %H:%M:%S")
+            subprocess.run(["SetFile", "-d", date_str, filepath], check=False, capture_output=True)
+        except Exception:
+            pass  # SetFile not available, modification time already set
+    # Linux: creation time not typically supported, modification time already set
 
 def to_deg(value: float, loc: list[str]) -> tuple[int, int, float, str]:
     """convert decimal coordinates into degrees, munutes and seconds tuple
@@ -208,7 +233,7 @@ def set_EXIF(filepath: str, lat: float, lng: float, altitude: float, timeStamp: 
         exif_dict['GPS'] = gps_ifd
 
     except Exception as e:
-        print("Coordinates not settled")
+        logger.warning(f"Coordinates not settled: {e}")
 
     exif_bytes = piexif.dump(exif_dict)
     piexif.insert(exif_bytes, filepath)

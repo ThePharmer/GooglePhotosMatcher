@@ -1,7 +1,7 @@
 ---
 id: 017
 priority: p1
-status: pending
+status: completed
 category: infrastructure
 created: 2025-11-22
 effort: small
